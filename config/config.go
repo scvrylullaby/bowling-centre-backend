@@ -8,7 +8,6 @@ import (
 	"github.com/scvrylullaby/bowling-centre-backend/pkg/logger"
 )
 
-
 type Config struct {
 	APP struct {
 		Env string
@@ -26,14 +25,14 @@ type Config struct {
 
 func Load() *Config {
 	if err := godotenv.Load(); err != nil {
-		logger.Log("No .env file found")
+		logger.Log(".env file not found")
 	}
 	var cfg Config
 	loadFromEnv(&cfg)
 	return &cfg
 }
 
-func loadFromEnv(cfg *Config){
+func loadFromEnv(cfg *Config) {
 	get := func(key string) string {
 		return strings.TrimSpace(os.Getenv(key))
 	}

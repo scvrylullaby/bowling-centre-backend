@@ -1,20 +1,38 @@
 package main
 
 import (
-	"net/http"
-
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"github.com/scvrylullaby/bowling-centre-backend/config"
+	"github.com/scvrylullaby/bowling-centre-backend/internal/core"
+	"github.com/scvrylullaby/bowling-centre-backend/internal/handlers"
+	"github.com/scvrylullaby/bowling-centre-backend/internal/models"
 	"github.com/scvrylullaby/bowling-centre-backend/pkg/logger"
 )
 
 func main() {
+	gin.SetMode(gin.ReleaseMode)
+
 	cfg := config.Load()
-
 	logger.Init()
-	
-	mux := http.NewServeMux()
-	handler := config.SetCors(cfg)(mux)
 
-	logger.Log("Server has been started at %s:%s",cfg.HTTP.Host,cfg.HTTP.Port)
-	http.ListenAndServe(":"+cfg.HTTP.Port, handler)
+	router := gin.New()
+
+	router.Use(cors.Default())
+
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+
+	stateChan := make(chan models.DashboardState, 10)
+	manager := core.NewManager(5, stateChan)
+
+	go manager.Run()
+
+	router.GET("/ws", func(c *gin.Context) {
+		handlers.Scoreboard(stateChan)(c.Writer, c.Request)
+	})
+	router.POST("/client", handlers.AddCustomer(manager))
+
+	logger.Log("Server has been started at %s:%s", cfg.HTTP.Host, cfg.HTTP.Port)
+	router.Run(":" + cfg.HTTP.Port)
 }
