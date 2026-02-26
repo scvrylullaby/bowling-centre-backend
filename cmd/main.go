@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/scvrylullaby/bowling-centre-backend/config"
@@ -18,7 +20,13 @@ func main() {
 
 	router := gin.New()
 
-	router.Use(cors.Default())
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{cfg.HTTP_CORS.Cors},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
@@ -28,9 +36,7 @@ func main() {
 
 	go manager.Run()
 
-	router.GET("/ws", func(c *gin.Context) {
-		handlers.Scoreboard(stateChan)(c.Writer, c.Request)
-	})
+	router.GET("/ws", gin.WrapH(handlers.Scoreboard(stateChan)))
 	router.POST("/client", handlers.AddCustomer(manager))
 
 	logger.Log("Server has been started at %s:%s", cfg.HTTP.Host, cfg.HTTP.Port)
